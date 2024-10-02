@@ -11,8 +11,7 @@ from api import ChatServerModule, DownloadServerModule, UserServerModule
 from DMBotNetwork import Server
 from dotenv import load_dotenv
 from root_path import ROOT_PATH
-from systems.auto_updater import AutoUpdater
-from systems.file_work import MainAppSettings
+from systems.file_work import Settings
 
 load_dotenv()
 
@@ -22,26 +21,10 @@ class FixedWidthFormatter(logging.Formatter):
         record.levelname = f"{record.levelname:<7}"
         return super().format(record)
 
-
-# Function to run a file in a new console
-def run_file_in_new_console(file_path: Path) -> None:
-    absolute_path = file_path.resolve()
-    system = platform.system()
-
-    if system == "Windows":
-        subprocess.Popen(["start", "cmd", "/c", f"python {absolute_path}"], shell=True)
-
-    elif system == "Darwin":
-        subprocess.Popen(["open", "-a", "Terminal", str(absolute_path)])
-
-    else:
-        subprocess.Popen(["x-terminal-emulator", "-e", f"python {absolute_path}"])
-
-
 def init_all() -> None:
     logging.info("Initialize main_app_settings.json...")
-    main_settings = MainAppSettings()
-    main_settings.init_base_settings(
+    Settings.load()
+    Settings.init_base_settings(
         {
             "app": {
                 "host": "localhost",
@@ -65,19 +48,6 @@ def init_all() -> None:
 
 
 async def main() -> None:
-    main_settings = MainAppSettings()
-
-    if main_settings.get_s("app.auto_update"):
-        updater = AutoUpdater()
-        if updater.is_needs_update():
-            run_file_in_new_console(
-                ROOT_PATH / "Code" / "auto_updater" / "auto_updater.py"
-            )
-            sys.exit(0)
-
-        else:
-            del updater
-
     base_access_flags = {
         "access_admin_chat": False,
         "change_access": False,
@@ -91,15 +61,15 @@ async def main() -> None:
     base_owener_password = env_password if env_password else "owner_password"
 
     await Server.setup_server(
-        server_name=main_settings.get_s("app.server_name"),
-        host=main_settings.get_s("app.host"),
-        port=main_settings.get_s("app.port"),
+        server_name=Settings.get_s("app.server_name"),
+        host=Settings.get_s("app.host"),
+        port=Settings.get_s("app.port"),
         db_path=Path(ROOT_PATH / "data"),
         init_owner_password=base_owener_password,
         base_access=base_access_flags,
-        allow_registration=main_settings.get_s("app.allow_registration"),
-        timeout=main_settings.get_s("app.timeout"),
-        max_player=main_settings.get_s("app.max_players"),
+        allow_registration=Settings.get_s("app.allow_registration"),
+        timeout=Settings.get_s("app.timeout"),
+        max_player=Settings.get_s("app.max_players"),
     )
 
     await Server.start()
